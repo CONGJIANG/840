@@ -1,0 +1,10 @@
+x<-lapply(rep(500, 5000), rnorm, mean = 3, sd =2)
+x<- lapply(x, mean)
+
+x<-matrix(c(3,2,34,8,55,656,3,4,6,23,8,9), 2)
+y<-matrix(0, nrow(x), ncol(x))
+y
+for (i in 1:nrow(x)) {
+  y[i, which(x[i,] == max(x[i,]))] = 1
+}
+y
