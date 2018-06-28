@@ -8,3 +8,15 @@ for (i in 1:nrow(x)) {
   y[i, which(x[i,] == max(x[i,]))] = 1
 }
 y
+
+
+GenMAP<-function(zig = NULL){
+  MAP<-matrix(0, nrow(zig), ncol(zig))
+  cla <-rep(0, nrow(zig))
+  for (i in 1:nrow(zig)) {
+    cla[i] = which(zig[i,] == max(zig[i,]))
+    MAP[i, cla[i]] = 1
+    
+  }
+  list(MAP = MAP, classes = cla )
+}
