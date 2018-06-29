@@ -20,3 +20,12 @@ GenMAP<-function(zig = NULL){
   }
   list(MAP = MAP, classes = cla )
 }
+
+#####  For m!=1
+# m =2; N =10
+# z = lapply(rep(N,m), rmultinom, size = 1, prob = pi )
+#library(parallel)
+#zig = mclapply(rep(N,m), rmultinom, size = 1, prob = par$pi, mc.cores = 8)
+# for (i in 1:m) {
+#  corresponding to add and average.
+# }
