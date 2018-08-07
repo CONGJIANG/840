@@ -1,0 +1,18 @@
+#########
+Facebook<-read.table("/Users/congjiang/Downloads/facebook_combined.txt")
+el=as.matrix(Facebook) # coerces the data into a two-column matrix format that igraph likes
+el[,1]=as.character(el[,1])
+el[,2]=as.character(el[,2])
+
+Facebookigraph <-igraph::graph.edgelist(el,directed=FALSE) # turns the edgelist into a 'graph object'
+Facebook.net <- snowboot::igraph_to_network(Facebookigraph)
+Facebook.net
+
+res<- summary_net(Enron.net)
+res
+
+## 
+a<- snowboot::LSMI(net = Facebook.net, n.seeds = 50, n.neigh = 2)
+a
+sample.res<- snowboot::Oempdegreedistrib(net = Facebook.net, n.seeds = 10, n.neigh = 2, num.sam = 1)
+sample.res
