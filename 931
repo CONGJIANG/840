@@ -1,0 +1,51 @@
+```{r}
+n<- 1641
+## let p1 = P(E); p2 = P(D|E); p3 = P(D|E^C)
+p1 <- .4; p2 <- .2; p3 <- .6;
+sample <- function(n, p1, p2, p3){
+  sam <- matrix(0, 2,2)
+  n1 <- as.integer(n*p1)
+  n2 <- n-n1
+  sam[1,1] = rbinom(1, n1, p2)
+  sam[1,2] = n1 -sam[1,1]
+  sam[2,1] = rbinom(1, n2, p3)
+  sam[2,2] = n2 -sam[2,1]
+      
+  RR <- (sam[1,1]/n1)/(sam[2,1]/n2)
+  lnRR <- log(RR)
+  
+  OR <- (sam[1,1] * sam[2,2])/(sam[1,2] * sam[2,1])
+  lnOR <- log(OR)
+  
+  est <- c(RR, lnRR, OR, lnOR)
+  
+  colnames(sam) <- c("D","D^C")
+  rownames(sam) <- c("E","E^C")
+  return(list (sample = sam, estimators = est) )
+}
+
+sample(1641, .4,.3,.6)
+
+```
+```{r}
+## for 5 replications
+library(parallel) 
+mclapply(rep(1641, 5), function(i)  sample(n = i,p1 =.4,p2=.3,p3 =.6), mc.cores = 8)
+
+```
+
+
+```{r}
+library(parallel) 
+dat <- mclapply(rep(1641, 1000), function(i)  sample(n = i,p1 =.4,p2=.3,p3 =.6)$estimators, mc.cores = 8)
+dat <- do.call(cbind, dat)
+rownames(dat) <- c("RR", "lnRR", "OR", "lnOR")
+dat[,1:5]
+
+
+hist(dat[1,], main = "RR")
+hist(dat[2,], main = "lnRR")
+hist(dat[3,], main = "OR")
+hist(dat[4,], main = "lnOR")
+```
+
