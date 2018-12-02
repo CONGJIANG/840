@@ -127,7 +127,7 @@ psmodel2 <- glm(A ~ x1 + x3, family = binomial(link = "logit"))
 ps2<-psmodel2$fitted.values
 library(parallel)
 m2 <- mclapply(dat, getgam, ps =ps2, mc.cores = 8)
-m2 <- do.call(rbind, m1)
+m2 <- do.call(rbind, m2)
 
 
 # bias
@@ -164,20 +164,20 @@ psmodel3 <- glm(A ~ x1 + x2, family = binomial(link = "logit"))
 ps3<-psmodel3$fitted.values
 library(parallel)
 m3 <- mclapply(dat, getgam, ps =ps3, mc.cores = 8)
-m3 <- do.call(rbind, m1)
+m3 <- do.call(rbind, m3)
 
 
 # bias
-bias2 <- apply(m2, 2, mean) - .5
-bias2
+bias3 <- apply(m3, 2, mean) - .5
+bias3
 
-diff = m2 - apply(m2, 2, mean)
+diff = m3 - apply(m3, 2, mean)
 diff2 = apply(diff, c(1,2), function(x) x^2)
 # SD
-SD2 <- sqrt(apply(diff2, 2, sum)/999)
-SD2
+SD3 <- sqrt(apply(diff2, 2, sum)/999)
+SD3
 # MSE
-MSE2 <- apply(diff2, 2, mean)
+MSE3 <- apply(diff2, 2, mean)
 
 table1[3,1] <- bias3[1]
 table1[3,2] <- SD3[1]
@@ -194,24 +194,24 @@ table3[3,3] <- MSE3[3]
 
 # Model 4
 ```{r}
-psmodel2 <- glm(A ~ x1 + x3, family = binomial(link = "logit"))
-ps2<-psmodel2$fitted.values
+psmodel4 <- glm(A ~ x1 + x2 + x3, family = binomial(link = "logit"))
+ps4<-psmodel4$fitted.values
 library(parallel)
-m2 <- mclapply(dat, getgam, ps =ps1, mc.cores = 8)
-m2 <- do.call(rbind, m1)
+m4 <- mclapply(dat, getgam, ps =ps4, mc.cores = 8)
+m4 <- do.call(rbind, m4)
 
 
 # bias
-bias2 <- apply(m2, 2, mean) - .5
-bias2
+bias4 <- apply(m4, 2, mean) - .5
+bias4
 
-diff = m2 - apply(m2, 2, mean)
+diff = m4 - apply(m4, 2, mean)
 diff2 = apply(diff, c(1,2), function(x) x^2)
 # SD
-SD2 <- sqrt(apply(diff2, 2, sum)/999)
-SD2
+SD4 <- sqrt(apply(diff2, 2, sum)/999)
+SD4
 # MSE
-MSE2 <- apply(diff2, 2, mean)
+MSE4 <- apply(diff2, 2, mean)
 
 table1[4,1] <- bias4[1]
 table1[4,2] <- SD4[1]
@@ -224,6 +224,12 @@ table2[4,3] <- MSE4[2]
 table3[4,1] <- bias4[3]
 table3[4,2] <- SD4[3]
 table3[4,3] <- MSE4[3]
+```
+
+```{r}
+table1
+table2
+table3
 ```
 
 
