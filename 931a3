@@ -1,17 +1,9 @@
-psmodel2 <- glm(A ~ x1 + x3, family = binomial(link = "logit"))
-ps2<-psmodel2$fitted.values
-psmodel3 <- glm(A ~ x1 + x2, family = binomial(link = "logit"))
-ps3<-psmodel3$fitted.values
-psmodel4 <- glm(A ~ x1 + x2 + x3, family = binomial(link = "logit"))
-ps4<-psmodel4$fitted.values
-
-
 ---
 title: "a3"
 output: html_document
 ---
 
-```{r, warning=FALSE}
+```{r, warning=FALSE, cache = TRUE}
 library(Matching)
 getgam <- function(mydata = mydata, ps =ps){
   
@@ -41,6 +33,7 @@ n <- 2500
 x1 <- rnorm(n)
 x2 <- rnorm(n)
 x3 <- rnorm(n)
+expit <- function(x) 1/(1 + exp(-x)) 
 A <- rbinom(n, 1, expit( .5*x1 + .75*x3))
 gamma0<-.5
 eta <- exp( 0.5 + 4*(1 + exp(-3 * x1))^(-1) + x2 + gamma0 * A)
@@ -57,7 +50,7 @@ getgam(mydata = mydata, ps =ps1)
 ```
 
 Here is Generating Data function:
-```{r}
+```{r, cache = TRUE}
 set.seed(1)
 n <- 2500
 gamma0<-.5
@@ -78,6 +71,7 @@ GeneD <- function(n){
 dat <- lapply(1:1000, function(i) GeneD(n) )
 # dat
 # save(dat, file = "sim.rda")
+
 psmodel1 <- glm(A ~ x1, family = binomial(link = "logit"))
 ps1<-psmodel1$fitted.values
 
@@ -122,7 +116,7 @@ table3[1,3] <- MSE1[3]
 
 
 # Model 2
-```{r}
+```{r, cache = TRUE}
 psmodel2 <- glm(A ~ x1 + x3, family = binomial(link = "logit"))
 ps2<-psmodel2$fitted.values
 library(parallel)
@@ -159,7 +153,7 @@ table3[2,3] <- MSE2[3]
 
 
 # Model 3
-```{r}
+```{r, cache = TRUE}
 psmodel3 <- glm(A ~ x1 + x2, family = binomial(link = "logit"))
 ps3<-psmodel3$fitted.values
 library(parallel)
@@ -193,7 +187,7 @@ table3[3,3] <- MSE3[3]
 ```
 
 # Model 4
-```{r}
+```{r, cache = TRUE}
 psmodel4 <- glm(A ~ x1 + x2 + x3, family = binomial(link = "logit"))
 ps4<-psmodel4$fitted.values
 library(parallel)
@@ -234,7 +228,7 @@ table3
 
 
 
-```{r}
+```{r, cache = TRUE}
 library(twang)
 rhc <-read.csv(file="/Users/congjiang/Downloads/rhc.csv")
 
@@ -257,7 +251,7 @@ plot(ps.rhc)
 ps.rhc$desc$es.mean.ATE$n.trees
 ```
 
-```{r}
+```{r, cache = TRUE}
 # to obatin the optimal number of trees (M)
 plot(ps.rhc)
 ps.rhc$desc$es.mean.ATE$n.trees
@@ -274,7 +268,7 @@ summary(ps.rhc$gbm.obj, n.trees = ps.rhc$desc$es.mean.ATE$n.trees, plot = FALSE)
 
 ```
 
-```{r}
+```{r, cache = TRUE}
 # Inverse Probability Weights
 rhc$w <- get.weights(ps.rhc, stop.method = "es.mean")
 library(survey)
@@ -283,7 +277,7 @@ summary (svyglm(dth30_n ~ swang1_n, design = design.ps, family = quasibinomial()
 
 ```
 
-```{r}
+```{r, cache = TRUE}
 # matching on PS 
 greedymatch <- Match(Tr = rhc$swang1_n , M =1, X = rhc$w)
 matched <- rhc[ unlist(greedymatch[c("index.treated", "index.control")]),]
