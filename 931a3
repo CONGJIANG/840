@@ -4,3 +4,292 @@ psmodel3 <- glm(A ~ x1 + x2, family = binomial(link = "logit"))
 ps3<-psmodel3$fitted.values
 psmodel4 <- glm(A ~ x1 + x2 + x3, family = binomial(link = "logit"))
 ps4<-psmodel4$fitted.values
+
+
+---
+title: "a3"
+output: html_document
+---
+
+```{r, warning=FALSE}
+library(Matching)
+getgam <- function(mydata = mydata, ps =ps){
+  
+  # matching
+  mydata$ps <- ps
+  psmatch<-Match(Tr=mydata$A, M=1, X=mydata$ps)
+  matched<-mydata[unlist(psmatch[c("index.treated","index.control")]), ]
+  a1 <-summary(glm(eta ~ A, family = poisson(link = log), data = matched))$coefficients[2]
+  
+  # IPW
+  w <- mydata$A/ps + (1-mydata$A)/(1-ps)
+  a2 <- summary(glm(eta ~ A, family = poisson(link = log), weight = w, data = mydata))$coefficients[2]
+  
+  # Stratification
+  q <-quantile(ps, probs = seq(0,1, length = 6))
+  r1 <- summary(glm(eta ~ A, family = poisson(link = log), data = mydata[ps <= q[2], ]))$coefficients[2]
+  r2 <- summary(glm(eta ~ A, family = poisson(link = log), data = mydata[ (q[2] < ps & ps <= q[3]), ]))$coefficients[2]
+  r3 <- summary(glm(eta ~ A, family = poisson(link = log), data = mydata[ (q[3] < ps & ps <= q[4]), ]))$coefficients[2]
+  r4 <- summary(glm(eta ~ A, family = poisson(link = log), data = mydata[ (q[4] < ps & ps <= q[5]), ]))$coefficients[2]
+  r5 <- summary(glm(eta ~ A, family = poisson(link = log), data = mydata[ (q[6] <= ps), ]))$coefficients[2]
+  a3 <-mean(c(r1,r2,r3,r4,r5))
+  return(c(a1,a2,a3))
+}
+
+
+n <- 2500
+x1 <- rnorm(n)
+x2 <- rnorm(n)
+x3 <- rnorm(n)
+A <- rbinom(n, 1, expit( .5*x1 + .75*x3))
+gamma0<-.5
+eta <- exp( 0.5 + 4*(1 + exp(-3 * x1))^(-1) + x2 + gamma0 * A)
+
+mydata<-data.frame(x1,x2,x3,A,eta)
+# mydata<-data.frame(mydata)
+
+
+
+psmodel1 <- glm(A ~ x1, family = binomial(link = "logit"))
+ps1<-psmodel1$fitted.values
+
+getgam(mydata = mydata, ps =ps1)
+```
+
+Here is Generating Data function:
+```{r}
+set.seed(1)
+n <- 2500
+gamma0<-.5
+GeneD <- function(n){
+  
+  x1 <- rnorm(n)
+  x2 <- rnorm(n)
+  x3 <- rnorm(n)
+  A <- rbinom(n, 1, expit( .5*x1 + .75*x3))
+  eta <- exp( 0.5 + 4*(1 + exp(-3 * x1))^(-1) + x2 + .5 * A)
+  
+  mydata<-data.frame(x1,x2,x3,A,eta)
+  mydata
+}
+
+### for i= 1000 replications 
+### you can have a simple testing, we suppose i =3, and n =5
+dat <- lapply(1:1000, function(i) GeneD(n) )
+# dat
+# save(dat, file = "sim.rda")
+psmodel1 <- glm(A ~ x1, family = binomial(link = "logit"))
+ps1<-psmodel1$fitted.values
+
+library(parallel)
+m1 <- mclapply(dat, getgam, ps =ps1, mc.cores = 8)
+m1 <- do.call(rbind, m1)
+
+table1 <- matrix(0, 4, 3)
+table2 <- matrix(0, 4, 3)
+table3 <- matrix(0, 4, 3)
+colnames(table1) <- c("Bias","SD","MSE")
+rownames(table1) <- c("Model1","Model2","Model3","Model4")
+colnames(table2) <- c("Bias","SD","MSE")
+rownames(table2) <- c("Model1","Model2","Model3","Model4")
+colnames(table3) <- c("Bias","SD","MSE")
+rownames(table3) <- c("Model1","Model2","Model3","Model4")
+# bias
+bias1 <- apply(m1, 2, mean) - .5
+bias1
+
+diff = m1 - apply(m1, 2, mean)
+diff2 = apply(diff, c(1,2), function(x) x^2)
+# SD
+SD1 <- sqrt(apply(diff2, 2, sum)/999)
+SD1
+# MSE
+MSE1 <- apply(diff2, 2, mean)
+
+# Matching
+table1[1,1] <- bias1[1]
+table1[1,2] <- SD1[1]
+table1[1,3] <- MSE1[1]
+# IWP
+table2[1,1] <- bias1[2]
+table2[1,2] <- SD1[2]
+table2[1,3] <- MSE1[2]
+#  stratification
+table3[1,1] <- bias1[3]
+table3[1,2] <- SD1[3]
+table3[1,3] <- MSE1[3]
+```
+
+
+# Model 2
+```{r}
+psmodel2 <- glm(A ~ x1 + x3, family = binomial(link = "logit"))
+ps2<-psmodel2$fitted.values
+library(parallel)
+m2 <- mclapply(dat, getgam, ps =ps2, mc.cores = 8)
+m2 <- do.call(rbind, m1)
+
+
+# bias
+bias2 <- apply(m2, 2, mean) - .5
+bias2
+
+diff = m2 - apply(m2, 2, mean)
+diff2 = apply(diff, c(1,2), function(x) x^2)
+# SD
+SD2 <- sqrt(apply(diff2, 2, sum)/999)
+SD2
+# MSE
+MSE2 <- apply(diff2, 2, mean)
+
+table1[2,1] <- bias2[1]
+table1[2,2] <- SD2[1]
+table1[2,3] <- MSE2[1]
+
+table2[2,1] <- bias2[2]
+table2[2,2] <- SD2[2]
+table2[2,3] <- MSE2[2]
+
+table3[2,1] <- bias2[3]
+table3[2,2] <- SD2[3]
+table3[2,3] <- MSE2[3]
+```
+
+
+
+
+# Model 3
+```{r}
+psmodel3 <- glm(A ~ x1 + x2, family = binomial(link = "logit"))
+ps3<-psmodel3$fitted.values
+library(parallel)
+m3 <- mclapply(dat, getgam, ps =ps3, mc.cores = 8)
+m3 <- do.call(rbind, m1)
+
+
+# bias
+bias2 <- apply(m2, 2, mean) - .5
+bias2
+
+diff = m2 - apply(m2, 2, mean)
+diff2 = apply(diff, c(1,2), function(x) x^2)
+# SD
+SD2 <- sqrt(apply(diff2, 2, sum)/999)
+SD2
+# MSE
+MSE2 <- apply(diff2, 2, mean)
+
+table1[3,1] <- bias3[1]
+table1[3,2] <- SD3[1]
+table1[3,3] <- MSE3[1]
+
+table2[3,1] <- bias3[2]
+table2[3,2] <- SD3[2]
+table2[3,3] <- MSE3[2]
+
+table3[3,1] <- bias3[3]
+table3[3,2] <- SD3[3]
+table3[3,3] <- MSE3[3]
+```
+
+# Model 4
+```{r}
+psmodel2 <- glm(A ~ x1 + x3, family = binomial(link = "logit"))
+ps2<-psmodel2$fitted.values
+library(parallel)
+m2 <- mclapply(dat, getgam, ps =ps1, mc.cores = 8)
+m2 <- do.call(rbind, m1)
+
+
+# bias
+bias2 <- apply(m2, 2, mean) - .5
+bias2
+
+diff = m2 - apply(m2, 2, mean)
+diff2 = apply(diff, c(1,2), function(x) x^2)
+# SD
+SD2 <- sqrt(apply(diff2, 2, sum)/999)
+SD2
+# MSE
+MSE2 <- apply(diff2, 2, mean)
+
+table1[4,1] <- bias4[1]
+table1[4,2] <- SD4[1]
+table1[4,3] <- MSE4[1]
+
+table2[4,1] <- bias4[2]
+table2[4,2] <- SD4[2]
+table2[4,3] <- MSE4[2]
+
+table3[4,1] <- bias4[3]
+table3[4,2] <- SD4[3]
+table3[4,3] <- MSE4[3]
+```
+
+
+
+```{r}
+library(twang)
+rhc <-read.csv(file="/Users/congjiang/Downloads/rhc.csv")
+
+rhc$swang1_n<-as.numeric(rhc$swang1=='RHC')
+rhc$dth30_n<-as.numeric(rhc$dth30=='Yes')
+
+
+
+ps.rhc <- ps(swang1_n ~ cat1+ca+cardiohx+chfhx+dementhx+psychhx+chrpulhx+renalhx+liverhx+gibledhx+malighx+immunhx+transhx+amihx+age+sex+edu+das2d3pc+aps1+scoma1+meanbp1+wblc1+hrt1+resp1+temp1+pafi1+alb1+hema1+bili1+crea1+sod1+pot1+paco21+ph1+wtkilo1+dnr1+ninsclas+resp+card+neuro+gastr+renal+meta+hema+seps+trauma+ortho+race+income+wtkilo1+surv2md1,
+                 data = rhc,
+                 n.trees=6000,
+                 interaction.depth=2,
+                 shrinkage=0.01,
+                 perm.test.iters=0,
+                 stop.method=c("es.mean","ks.max"),
+                 estimand = "ATE",verbose=FALSE) 
+
+# to obatin the optimal number of trees (M)
+plot(ps.rhc)
+ps.rhc$desc$es.mean.ATE$n.trees
+```
+
+```{r}
+# to obatin the optimal number of trees (M)
+plot(ps.rhc)
+ps.rhc$desc$es.mean.ATE$n.trees
+# Assessing balance
+rhc.balance <- bal.table(ps.rhc)
+rhc.balance
+# computing average standardized absolute distance(ASAM)
+mean(abs(rhc.balance$es.mean.ATE$std.eff.sz))
+# Looking at each confounder individually
+plot(ps.rhc, plots = 3)
+
+
+summary(ps.rhc$gbm.obj, n.trees = ps.rhc$desc$es.mean.ATE$n.trees, plot = FALSE)
+
+```
+
+```{r}
+# Inverse Probability Weights
+rhc$w <- get.weights(ps.rhc, stop.method = "es.mean")
+library(survey)
+design.ps <- svydesign(ids = ~ 1, weights = ~w, data = rhc)
+summary (svyglm(dth30_n ~ swang1_n, design = design.ps, family = quasibinomial()))
+
+```
+
+```{r}
+# matching on PS 
+greedymatch <- Match(Tr = rhc$swang1_n , M =1, X = rhc$w)
+matched <- rhc[ unlist(greedymatch[c("index.treated", "index.control")]),]
+
+# outcome analysis
+y_trt <- matched$dth30_n[matched$swang1_n == 1]
+y_con <- matched$dth30_n[matched$swang1_n == 0]
+
+# pairwise difference
+diffy <- y_trt - y_con
+
+# paired t-test
+t.test(diffy)
+```
+point estimate is 0.1137. Difference in probability of death at 30 days if everyone received RHC versus if no one received RHC is 0.1137 (i.e. higher risk of death in RHC group). Also, confidient interval is (0.1069, 0.1205), P-value is < 0.0001
