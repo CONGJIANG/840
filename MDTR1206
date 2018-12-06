@@ -1,0 +1,134 @@
+---
+title: "DTR1206"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+# We consider interaction terms between x and h. 
+- Blip function : $\gamma_j(x_j, a_j; \psi_j) = a_j(\psi_{j0} + \psi_{j1}x_{j} + \psi_{j2}*h + \psi_{j3}*x*h)$ $\;$
+wherer $h =1$ if a person linked to the subject(such as spouse) receives the treatment, and $h =0$ otherwise.
+Truth : $$\mathop{\mathbb{E}[Y | ~]}= \beta_0 + \beta_1X + \beta_2 X^2 + A(\psi_0 + \psi_1X + \psi_2H + \psi_3 HX)$$
+
+## Model 1: 
+$$\mathop{\mathbb{E}[Y | ~]}= \beta_0 + \beta_1X + \beta_2H +\beta_3HX + A(\psi_0 + \psi_1X + \psi_2H + \psi_3 HX)$$
+with weight $w = |A - P(A = 1|covariates)|$
+
+```{r}
+expit <- function(x) 1/(1 + exp(-x)) 
+alpha0 <- c(-2, -1, 0, 1,2)
+alpha1 <- c(-2, -1, 0, 1,2)
+
+psi0 <-c(-1, -.1, 0, .1, 1)
+psi1 <-c(-1, -.1, 0, .1, 1)
+psi2 <-c(-.5, 0, .5)
+beta <- c(-1, -.5, 0, .5, 1)
+
+
+m <-1000  # m replications
+n <-10000
+Psi5 <- matrix(0, nrow = m, ncol =8+1)
+decision <- matrix(0, nrow = n, 3)
+for (j in 1:m) {
+  X1 <- rnorm(n) + 2
+  X12 <- X1^2
+  A1 <- rbinom(n, 1, expit( alpha0[3] + alpha1[2]*X1))
+  h <- rbinom(n, 1, expit(X1))
+  ## for Y
+  gamma1 <- A1 * (psi0[5] + psi1[5]*X1 + psi2[3]*h + psi2[3]*X1*h)
+  Y <- beta[1] + beta[2]*X1 + beta[5]*(X12) + gamma1
+  ### Treatment model
+
+  treat.mod <- glm(A1~X1, family = 'binomial')
+  # outcome model/regression:
+  fit <- lm(Y ~ X1 + h + I(X1 * h) +  A1 + I(A1*X1) + I(A1*h) + I(A1*X1*h) , weights = abs(A1 - fitted(treat.mod)))
+  
+  Psi5[j,1:8] <- as.vector(fit$coefficients)
+  
+  
+
+  decision[,1] <- psi0[5] + psi1[5]*X1 + psi2[3]*h + psi2[3]*X1*h
+  decision[,2] <- fit$coefficients[5] + fit$coefficients[6]*X1 + fit$coefficients[7]*h + fit$coefficients[8]*X1*h
+  decision[,3] <- sign(decision[,1] )==sign(decision[,2])
+  prop <- sum(decision[,3])/n
+  Psi5[j,9] <- prop
+}
+colnames(Psi5) <- c("beta0", "beta 1","beta 2","beta 3", "psi0", "psi1","psi2", "psi3","correct ratio")
+Psi5[1:10,]
+
+```
+
+```{r}
+apply(Psi5, 2, mean)
+proph <- apply(Psi5, 2, mean)[9]
+proph
+boxplot(Psi5[,5], Psi5[,6], Psi5[,7], Psi5[,8],  names=c("Psi0", "Psi1", "Psi2", "Psi3") )
+abline(h = 1, col = "green")
+abline(h = .5, col = "red") 
+```
+
+## Model 2: 
+$$\mathop{\mathbb{E}[Y | ~]}= \beta_0 + \beta_1X + A(\psi_0 + \psi_1X + \psi_2H + \psi_3 HX)$$
+with weight $w_{a,h}(x) = |a - \mathop{\mathbb{E}[A | X=x]} |*|h - \mathop{\mathbb{E}[H | X=x]}|$
+
+
+```{r}
+expit <- function(x) 1/(1 + exp(-x)) 
+alpha0 <- c(-2, -1, 0, 1,2)
+alpha1 <- c(-2, -1, 0, 1,2)
+
+psi0 <-c(-1, -.1, 0, .1, 1)
+psi1 <-c(-1, -.1, 0, .1, 1)
+psi2 <-c(-.5, 0, .5)
+beta <- c(-1, -.5, 0, .5, 1)
+
+
+m <-1000  # m replications
+n <-10000
+Psi51 <- matrix(0, nrow = m, ncol =7)
+decision <- matrix(0, nrow = n, 3)
+for (j in 1:m) {
+  X1 <- rnorm(n) + 2
+  X12 <- X1^2
+  A1 <- rbinom(n, 1, expit( alpha0[3] + alpha1[2]*X1))
+  h <- rbinom(n, 1, expit(X1))
+  ## for Y
+  gamma1 <- A1 * (psi0[5] + psi1[5]*X1 + psi2[3]*h + psi2[3]*X1*h)
+  Y <- beta[1] + beta[2]*X1 + beta[5]*(X12) + gamma1
+  ### Treatment model
+
+  treat.mod <- glm(A1~X1, family = 'binomial')
+  
+  H.treat.mod <- glm(h~X1, family = 'binomial')
+
+  w2 = abs(A1 - fitted(treat.mod)) * abs(h - fitted(H.treat.mod))
+
+  # outcome model/regression:
+  fit <- lm(Y ~ X1 + A1 + I(A1*X1) + I(A1*h) + I(A1*h*X1), weights = w2)
+  # outcome model/regression:
+  # fit <- lm(Y ~ X1 + h + I(X1 * h) +  A1 + I(A1*X1) + I(A1*h) + I(A1*X1*h) , weights = abs(A1 - fitted(treat.mod)))
+  
+  Psi51[j,1:6] <- as.vector(fit$coefficients)
+  
+  
+
+  decision[,1] <- psi0[5] + psi1[5]*X1 + psi2[3]*h + psi2[3]*X1*h
+  decision[,2] <- fit$coefficients[3] + fit$coefficients[4]*X1 + fit$coefficients[5]*h + fit$coefficients[6]*X1*h
+  decision[,3] <- sign(decision[,1] )==sign(decision[,2])
+  prop <- sum(decision[,3])/n
+  Psi51[j,7] <- prop
+}
+colnames(Psi51) <- c("beta0", "beta 1", "psi0", "psi1","psi2", "psi3","correct ratio")
+Psi51[1:10,]
+
+```
+
+```{r}
+apply(Psi51, 2, mean)
+proph <- apply(Psi51, 2, mean)[7]
+proph
+boxplot(Psi51[,3], Psi51[,4], Psi51[,5], Psi51[,6],  names=c("Psi0", "Psi1", "Psi2", "Psi3") )
+abline(h = 1, col = "green")
+abline(h = .5, col = "red") 
+```
+
