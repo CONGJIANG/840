@@ -1,0 +1,44 @@
+```{r}
+library(igraph)
+A=c(1,1,0,0) 
+B=c(1,0,1,0) 
+C=c(1,0,1,0) 
+D=c(0,1,0,1) 
+E=c(0,0,1,1) 
+bm=matrix(c(A,B,C,D,E),nrow=5,byrow=TRUE) 
+dimnames(bm)=list(c("A","B","C","D","E"),c("Family1","Family2","Family3","Family4"))
+bm
+bg=graph.incidence(bm)
+
+
+shapes=c("circle","circle","circle","circle","circle","square","square","square","square") # make the first 5 nodes circles, and the rest squares.
+
+labeldistances=c(0,0,0,0,0,0.6,0.6,0.6,0.6) #The labels for the first 5 nodes will be in the center of the node, but the others will be offset
+
+plot.igraph(bg, vertex.label.dist=labeldistances, vertex.color=V(bg)$type) #The vertex.label.degree= argument tells where to put the label, in radians.
+
+```
+
+```{r}
+n <-5
+bm <- diag(x =1, n, n)
+dimnames(bm) <- list(c("A","B","C","D","E"),c("Family1","Family2","Family3","Family4","Family5"))
+bg <- graph.incidence(bm)
+V(bg)$type 
+V(bg)$name
+
+# labeldistances=c(0,0,0,0,0,0.6,0.6,0.6,0.6,.6) #The labels for the first 5 nodes will be in the center of the node, but the others will be offset
+
+plot.igraph(bg,vertex.label.color="blue", vertex.size=15, vertex.label.font=4, vertex.color="green",edge.color="red") #The vertex.label.degree= argument tells where to put the label, in radians.
+```
+
+```{r}
+dat <- read.csv(file.choose(),header=TRUE,row.names=1,check.names=FALSE) 
+m <- as.matrix(dat) 
+g <- graph.adjacency(m,mode="undirected",weighted=NULL,diag=FALSE) 
+plot.igraph(g)
+
+plot.igraph(g,layout=layout.circle)
+
+plot.igraph(g,vertex.label=V(g)$name,vertex.size=30,vertex.label.color="yellow", vertex.label.font=2,vertex.color="darkblue",edge.color="black")
+```
