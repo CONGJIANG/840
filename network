@@ -22,7 +22,10 @@ plot.igraph(bg, vertex.label.dist=labeldistances, vertex.color=V(bg)$type) #The 
 ```{r}
 n <-5
 bm <- diag(x =1, n, n)
-dimnames(bm) <- list(c("A","B","C","D","E"),c("Family1","Family2","Family3","Family4","Family5"))
+# dimnames(bm) <- list(c("A","B","C","D","E"),c("Family1","Family2","Family3","Family4","Family5"))
+fam <- paste("Family", 1:n, sep = "")
+dimnames(bm) <- list(c(1:n), fam )
+bg <- graph.incidence(bm)
 bg <- graph.incidence(bm)
 V(bg)$type 
 V(bg)$name
