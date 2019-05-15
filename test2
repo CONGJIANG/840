@@ -1,0 +1,55 @@
+expit <- function(x) 1/(1 + exp(-x)) 
+alpha0 <- c(-2, -1, 0, 1,2)
+alpha1 <- c(-2, -1, 0, 1,2)
+
+psi0 <-c(-1, -.1, 0, .1, 1)
+psi1 <-c(-1, -.1, 0, .1, 1)
+psi2 <-c(-.5, 0, .5)
+beta <- c(-1, -.5, 0, .5, 1)
+n <- 10000
+ba <- sample_pa(n = n, power =1, m =1, directed = F)
+plot(ba, vertex.size = 6, vertex.label = NA)
+# access vertices and edges
+E(ba) 
+V(ba)
+# network adjancy matrix
+ba[]
+# add attributes to network, vertices or degres:
+
+V(ba)$X <- rnorm(n) +2
+V(ba)$Xsq <- V(ba)$X^2
+V(ba)$A <- rbinom(n, 1, expit( alpha0[3] + alpha1[2]* V(ba)$X ))
+
+# information about treated neighbors. 
+trt_nb <- as.vector(ba[] %*% V(ba)$A )
+# information about scalared indirect effect. 
+ind_eff <- trt_nb/apply(ba[], 1, sum)
+# generate ego data (first n/2)
+X1 <- V(ba)$X[1:(n/2)]
+X12 <- V(ba)$Xsq[1:(n/2)]
+A1 <- V(ba)$A[1:(n/2)]
+
+#h <- trt_nb[1:(n/2)] 
+#X_h <- V(ba)$X[(n/2 +1) : n]
+
+  gamma1 <- A1 * (psi0[5] + psi1[5]*X1 + psi2[3]*ind_eff[1:(n/2)])  # ind_eff we just use first n/2
+  Y <- beta[1] + beta[2]*X1 + beta[5]*(X12) + gamma1
+  ### Treatment model
+
+  treat.mod <- glm(A1~X1, family = 'binomial')
+  treat <- glm(V(ba)$A ~ V(ba)$X, family = 'binomial')   # propensity is fitted values of treat
+  prop.nb <- as.vector(ba[] %*% fitted(treat) )
+  
+#H.treat.mod <- glm(h~X_h, family = 'binomial')
+
+  w2 = abs(A1 - fitted(treat.mod)) * abs(ind_eff[1:(n/2)] - (prop.nb/apply(ba[], 1, sum))[1:(n/2)])
+
+  # outcome model/regression:
+  fit <- lm(Y ~ X1 + A1 + I(A1*X1) + I(A1*ind_eff[1:(n/2)]), weights = w2)
+  # outcome model/regression:
+  # fit <- lm(Y ~ X1 + h + I(X1 * h) +  A1 + I(A1*X1) + I(A1*h) + I(A1*X1*h) , weights = abs(A1 - fitted(treat.mod)))
+  
+  fit$coefficients
+  
+  
+  
