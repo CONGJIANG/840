@@ -1,0 +1,57 @@
+outer(1:2, 1:3, FUN = pmin) # (2, 3)-matrix with (i,j)th element min{i, j}
+## => Lower triangular matrix contains column number, upper triangular matrix contains row number
+outer(1:2, 1:3, FUN = "+")
+
+## Matrix multiplications
+A %*% t(A) # matrix multiplication
+A * A # Hadamard product, i.e., element-wise product
+(AoA <- A %o% A) # outer product => higher-dimensional array
+## => AoA[,,k,l] contains A * A[k,l] => AoA[i,j,k,l] contains A[i,j] * A[k,l]
+## => that's outer(A, A, FUN = "*") [multiplication is default anyways]
+stopifnot(identical(AoA, outer(A, A))) # see also ?outer => %o% = outer for multiplication
+
+
+arr # prints in z-slices; also column-major order (first fill dimension 1, then 2, then 3)
+str(arr) # use str() to the *str*ucture of the object arr
+arr[1,2,2] # pick out a value
+apply(arr, 1:2, FUN = sum) # for each combination of fixed first and second variables, sum over all other dimensions
+str(aperm(arr, perm = c(3,1,2))) # permute the array to dimensions (z,x,y)
+
+
+
+## Grids and coercion of data frames to matrices
+(grid <- expand.grid(1:3, LETTERS[1:2])) # create a grid with all combinations
+(grid <- grid[,ncol(grid):1]) # reorder
+class(grid) # a data.frame
+
+
+## Version 1: For single R objects
+getwd() # current working directory (where object will be saved unless otherwise specified)
+saveRDS(L, file = "mytmpfile.rds") # ending .rds
+rm(L) # remove the object L
+L # error => yep, it's gone
+stopifnot(!exists("L")) # check
+readRDS("mytmpfile.rds") # read and return the object
+(L <- readRDS("mytmpfile.rds")) # ... and assign to 'L' again
+system("rm mytmpfile.rds") # clean-up
+system("ls -l")
+## Advantage: We don't have to commit to a name of the object when saving/loading it.
+
+
+
+
+
+## One application is in R scripts involving longer computations or simulations:
+## myfile <- "myWork.rds"
+## if(file.exists(myfile)) {
+##    res <- readRDS(myfile)
+## } else {
+##    <do long computation>
+##    saveRDS(res, file = myfile)
+## }
+
+
+
+
+
+
