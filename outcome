@@ -1,0 +1,5 @@
+outcome <- function(x, h, b0, b1, psi0, psi1, psi2) {
+  a <- if ( (psi0 + psi1*x + psi2*h) > 0 )  1 else 0
+  yavg <- b0 + b1*x + a
+  yavg
+}
