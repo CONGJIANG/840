@@ -3,3 +3,16 @@ outcome <- function(x, h, b0, b1, psi0, psi1, psi2) {
   yavg <- b0 + b1*x + a
   yavg
 }
+
+
+outcome <- function( mat, b0, b1, psi0, psi1, psi2) {
+  # the 1st column of mat is x, and 2nd column is h. 
+  a <- if ( (psi0 + psi1*mat[1] + psi2*mat[2]) > 0 )  1 else 0
+  y <- b0 + b1*mat[1] + a
+  y
+}
+x <- c(1:5)
+h <- c(1,0,1,1,0)
+(mat <- cbind(x,h))
+
+apply( mat, 1, outcome, 1,1,1,1,1)
