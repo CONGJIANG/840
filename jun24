@@ -1,0 +1,6 @@
+outcome <- function(mat, psi0 ,psi1 , psi2) {
+  # mat is a matrix that columns are x, y, a, a_rec, h,
+  # res <- y - a*(psi0 + psi1*x + psi2*h) + a_rec * (psi0 + psi1*x + psi2*h)
+  res <- mat[2] - mat[3]*(psi0 + psi1*mat[1] + psi2*mat[5]) + mat[4] * (psi0 + psi1*mat[1] + psi2*mat[5])
+  res
+}
