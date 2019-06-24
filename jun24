@@ -4,3 +4,7 @@ outcome <- function(mat, psi0 ,psi1 , psi2) {
   res <- mat[2] - mat[3]*(psi0 + psi1*mat[1] + psi2*mat[5]) + mat[4] * (psi0 + psi1*mat[1] + psi2*mat[5])
   res
 }
+
+
+  Psi111[j, 6] <- sum( apply( cbind(X1_test, Y_test, A1_test, a_rec1, h_test), 
+                             1, outcome, psi0 = psi[1],psi1 = psi[6], psi2 = psi[6]))/length(X1_test)
