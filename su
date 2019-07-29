@@ -1,0 +1,34 @@
+n <- 2
+alpha <- .5; beta <- 1; gam1 <- .005; gam2 <- .1; gam3 <- .2; eta <-1; theta <- .5;
+# x1 <- rbinom(n, 1,  .5)
+# x2 <- runif(n, -1,1)
+# X <- cbind(x1,x2)
+x <- runif(n, -1,1)
+A <- rbinom(n, 1,  .5)
+Net <- matrix(1, n,n)
+# x %*% Net
+# x %*% Net
+# Net %*% x
+m <- alpha + beta * x + gam1 * beta * (x %*% Net) + eta * A + gam2 *eta*(A %*% Net) 
+            + A*theta*x + gam3*theta*x*(A %*% Net)
+Y <- m + rnorm(n)
+# rnorm(n)
+
+Q_learning <-function(x, Net, A, Y,  gam10, gam20, gam30, tol = 1e-6, maxit = 100){
+  u <- x + gam1* (x %*% Net)
+  z <- A + gam2 * (A %*% Net)
+  v <- A*x + gam3 * x * (A %*% Net)
+
+  
+  fit1 <- lm(Y ~ u + z + v)
+  est1 <- as.vector(fit1$coefficients)
+  
+  a <- est1[1] + est1[2]*x + est1[3]*A + est1[4]*A*x
+  b <- est1[2]*(x %*% Net)
+  c <- est1[3]*(A %*% Net)
+  d <- est1[4]*x*(A %*% Net)
+  fit2 <- lm(Y ~ a + b + c + d)
+  est2 <- as.vector(fit2$coefficients)
+  
+  
+}
