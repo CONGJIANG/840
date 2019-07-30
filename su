@@ -22,7 +22,7 @@ ols1 <- function(x, Net, A, Y,  gam1, gam2, gam3){
   
   u <- as.vector(x + gam1* (x %*% Net))
   z <- as.vector(A + gam2 * (A %*% Net))
-  v <- as.vector(A*x + gam3 * ((A*x) %*% Net))
+  v <- as.vector(A*x + gam3 * ((A*x) %*% Net))   # reason (A*X) then dot.prod Net.  we view A*X as a new covariate. 
   
   fit <- lm(Y ~ u + z + v)
   res <- as.vector(fit$coefficients)
