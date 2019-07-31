@@ -1,0 +1,205 @@
+---
+title: "SuSim1"
+output: html_document
+---
+
+```{r}
+n <- 5000
+alpha <- .5; beta <- 1;  eta <-1; theta <- .5; gam1 <- .05; gam2 <- .2; gam3 <- .2;
+
+
+x <- runif(n, -1,1)
+A <- rbinom(n, 1,  .5)
+Net <- matrix(0, n,n)
+Net[1:(n/2), (n/2 + 1): n] <- diag(n/2)
+Net[(n/2 + 1): n, 1:(n/2)] <- diag(n/2)
+
+# x %*% Net
+# Net %*% x # reason (A*X) then dot.prod Net.  we view A*X as a new covariate.
+m <- alpha + beta * x + gam1 * beta * (x %*% Net) + eta * A + gam2 *eta*(A %*% Net) + A*theta*x + gam3*theta*((x*A) %*% Net)
+Y <- as.vector(m + rnorm(n))
+
+
+
+ols1 <- function(x, Net, A, Y,  gam1, gam2, gam3){
+  
+  u <- as.vector(x + gam1* (x %*% Net))
+  z <- as.vector(A + gam2 * (A %*% Net))
+  v <- as.vector(A*x + gam3 * ((A*x) %*% Net))
+  
+  fit <- lm(Y ~ u + z + v)
+  res <- as.vector(fit$coefficients)
+  list(alpha = res[1], beta = res[2], eta = res[3], theta = res[4])
+}
+
+
+ols2 <- function(x, Net, A, Y, alpha, beta, eta, theta ){
+  a <- as.vector(alpha + beta*x + eta*A + theta*A*x)
+  b <- as.vector(beta*(x %*% Net))
+  c <- as.vector(eta*(A %*% Net))
+  d <- as.vector(theta*((x*A) %*% Net))
+  Y <- Y - a
+  fit2 <- lm(Y ~  b + c + d)
+  res2 <- as.vector(fit2$coefficients)
+  list(gam0 = res2[1], gam1 = res2[2], gam2= res2[3], gam3 = res2[4])
+}
+
+
+converge <- function(x, tol) {if(x < tol) TRUE else FALSE}
+
+Q_learning <-function(x, Net, A, Y,  gam10 = 0, gam20 = 0, gam30 =0, tol = 1e-10, maxit = 100, trace = FALSE){
+  
+  i<-1
+  apdt1 <- ols1(x, Net, A, Y,  gam10, gam20, gam30)
+  alpha0 <- apdt1$alpha; beta0 <- apdt1$beta;  eta0 <- apdt1$eta; theta0 <- apdt1$theta
+  
+  while(TRUE){
+
+    apdt2 <- ols2(x, Net, A, Y, alpha0, beta0, eta0, theta0)
+    gam11 <-apdt2$gam1;  gam21 <- apdt2$gam2; gam31 <- apdt2$gam3
+    apdt1 <- ols1(x, Net, A, Y,  gam11, gam21, gam31)
+    alpha1 <- apdt1$alpha; beta1 <- apdt1$beta;  eta1 <- apdt1$eta; theta1 <- apdt1$theta
+    
+    x0 <- c(alpha0 , beta0 ,eta0 , theta0, gam10,gam20,gam30)
+    x1 <- c(alpha1 , beta1 ,eta1 , theta1, gam11,gam21,gam31)
+    crit <- prod(sapply((x1-x0), function(i) converge( i, tol = tol) ))
+    
+    if (crit){
+      cat("Convergent  \n")
+      break
+    }
+    if (i > maxit){
+      warning("Failed to Converge")
+      break
+    }
+    
+    i <- i+1
+    
+    alpha0 <- alpha1; beta0 <- beta1;  eta0 <- eta1; theta0 <- theta1;
+    gam10 <- gam11;  gam20 <- gam21; gam30 <- gam31
+    
+    if (trace){
+      cat("iteration", i-2, ", parameters = ", round(x0, 6),
+          "\n", sep = " ") }
+  }
+  
+  list(sol = c(alpha = alpha0, beta = beta0, eta = eta0, theta = theta0,
+               gam1 = gam10, gam2 = gam20, gam3 = gam30) , niter = i)
+  
+}
+
+
+Q_learning(x, Net, A, Y, trace = TRUE)
+
+
+m <- 1000
+
+
+```
+
+
+
+
+
+
+
+
+$$\mathop{\mathbb{E}[Y | \sim]} = \alpha + \beta^{T}x_{i}^{\beta} + \eta a_{i} + \gamma_{2} \sum_{j \neq i}W_{ij} \eta a_{j}$$ $$ + a_{i} \theta^{T}x_{i}^{\theta} +\gamma_{3}\sum_{j \neq i}W_{ij}a_{j}\theta^{T}x_{j}^{\theta},$$
+
+
+```{r}
+n <- 5000
+alpha <- .5; beta <- 1;  eta <-1; theta <- .5; gam1 <- 0.05; gam2 <- .2; gam3 <- .2;
+al_trt <- c(-2, -1, 0, 1,2)
+
+x <- runif(n, -1,1)
+# A <- rbinom(n, 1,  .5)
+A <- rbinom(n, 1, expit( al_trt[3] + al_trt[2]*x))
+Net <- matrix(0, n,n)
+Net[1:(n/2), (n/2 + 1): n] <- diag(n/2)
+Net[(n/2 + 1): n, 1:(n/2)] <- diag(n/2)
+
+# x %*% Net
+# Net %*% x # reason (A*X) then dot.prod Net.  we view A*X as a new covariate.
+m <- alpha + beta * x + gam1 * beta * (x %*% Net) + eta * A + gam2 *eta*(A %*% Net) + A*theta*x + gam3*theta*((x*A) %*% Net)
+Y <- as.vector(m + rnorm(n))
+
+
+
+ols1 <- function(x, Net, A, Y, gam2, gam3, weight){
+  
+  u <- as.vector(x)
+  z <- as.vector(A + gam2 * (A %*% Net))
+  v <- as.vector(A*x + gam3 * ((A*x) %*% Net))
+  
+  fit <- lm(Y ~ u + z + v, weights = weight)
+  res <- as.vector(fit$coefficients)
+  list(alpha = res[1], beta = res[2], eta = res[3], theta = res[4])
+}
+
+
+ols2 <- function(x, Net, A, Y, alpha, beta, eta, theta, weight){
+  a <- as.vector(alpha + beta*x + eta*A + theta*A*x)
+  # b <- as.vector(beta*(x %*% Net))
+  c <- as.vector(eta*(A %*% Net))
+  d <- as.vector(theta*((x*A) %*% Net))
+  Y <- Y - a
+  fit2 <- lm(Y ~ c + d, weights = weight)
+  res2 <- as.vector(fit2$coefficients)
+  list(gam0 = res2[1], gam2= res2[2], gam3 = res2[3])
+}
+
+
+converge <- function(x, tol) {if(x < tol) TRUE else FALSE}
+expit <- function(x) 1/(1 + exp(-x)) 
+
+Q_learning <-function(x, Net, A, Y,  gam20 = 0, gam30 =0, tol = 1e-10, maxit = 100, trace = FALSE){
+  
+  i<-1
+  # weights
+  treat.mod <- glm(A~x, family = 'binomial')
+  w <- abs(A - fitted(treat.mod)) * as.vector( abs(A - fitted(treat.mod)) %*% Net)
+  
+
+  apdt1 <- ols1(x, Net, A, Y,  gam20, gam30, weight = w)
+  alpha0 <- apdt1$alpha; beta0 <- apdt1$beta;  eta0 <- apdt1$eta; theta0 <- apdt1$theta
+  
+  while(TRUE){
+
+    apdt2 <- ols2(x, Net, A, Y, alpha0, beta0, eta0, theta0, weight = w)
+    gam21 <- apdt2$gam2; gam31 <- apdt2$gam3
+    apdt1 <- ols1(x, Net, A, Y,  gam21, gam31, weight = w)
+    alpha1 <- apdt1$alpha; beta1 <- apdt1$beta;  eta1 <- apdt1$eta; theta1 <- apdt1$theta
+    
+    x0 <- c(alpha0 , beta0 ,eta0 , theta0, gam20,gam30)
+    x1 <- c(alpha1 , beta1 ,eta1 , theta1, gam21,gam31)
+    crit <- prod(sapply((x1-x0), function(i) converge( i, tol = tol) ))
+    
+    if (crit){
+      cat("Convergent  \n")
+      break
+    }
+    if (i > maxit){
+      warning("Failed to Converge")
+      break
+    }
+    
+    i <- i+1
+    
+    alpha0 <- alpha1; beta0 <- beta1;  eta0 <- eta1; theta0 <- theta1;
+   gam20 <- gam21; gam30 <- gam31
+    
+    if (trace){
+      cat("iteration", i-2, ", parameters = ", round(x0, 6),
+          "\n", sep = " ") }
+  }
+  
+  list(sol = c(alpha = alpha0, beta = beta0, eta = eta0, theta = theta0,
+                gam2 = gam20, gam3 = gam30) , niter = i)
+  
+}
+
+
+Q_learning(x, Net, A, Y, trace = TRUE)
+
+```
