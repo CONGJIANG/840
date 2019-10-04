@@ -1,0 +1,4 @@
+load("/Users/c55jiang/Downloads/ICPSR_36498/DS2001/36498-2001-Data.rda")
+da36498.2001$R02_AC1003
+dat2001 <- da36498.2001[1:5,]
+View(dat2001)
