@@ -1,0 +1,717 @@
+---
+title: '0124'
+output:
+  pdf_document: default
+  html_document: default
+---
+
+
+# We consider interaction terms between x and h. 
+- Blip function : $\gamma_j(x_j, a_j; \psi_j) = a_j(\psi_{j0} + \psi_{j1}x_{j} + \psi_{j2}*h + \psi_{j3}*x*h)$ $\;$
+wherer $h =1$ if a person linked to the subject(such as spouse) receives the treatment, and $h =0$ otherwise.
+Truth : $$\mathop{\mathbb{E}[Y | ~]}= \beta_0 + \beta_1X + \beta_2 X^2 + A(\psi_0 + \psi_1X + \psi_2H + \psi_3 HX)$$
+
+## Analysis 0
+## Model 0: 
+$$\mathop{\mathbb{E}[Y | ~]}= \beta_0 + \beta_1X + A(\psi_0 + \psi_1X + \psi_2H + \psi_3 HX)$$
+with weight $w = |A - P(A = 1|covariates)|$
+
+```{r}
+expit <- function(x) 1/(1 + exp(-x)) 
+alpha0 <- c(-2, -1, 0, 1,2)
+alpha1 <- c(-2, -1, 0, 1,2)
+
+psi0 <-c(-1, -.1, 0, .1, 1)
+psi1 <-c(-1, -.1, 0, .1, 1)
+psi2 <-c(-.5, 0, .5)
+beta <- c(-1, -.5, 0, .5, 1)
+
+
+m <-1000  # m replications
+n <- 100
+Psi0 <- matrix(0, nrow = m, ncol =6+1)
+decision <- matrix(0, nrow = n, 3)
+for (j in 1:m) {
+  X1 <- rnorm(n) + 2
+  X12 <- X1^2
+  A1 <- rbinom(n, 1, expit( alpha0[3] + alpha1[4]*X1))
+  h <- rbinom(n, 1, expit(X1))
+  ## for Y
+  gamma1 <- A1 * (psi0[5] + psi1[5]*X1 + psi2[3]*h + psi2[3]*X1*h)
+  Y <- beta[1] + beta[5]*X1 + beta[5]*(X12) + gamma1 + rnorm(n)
+  ### Treatment model
+
+  treat.mod <- glm(A1~X1, family = 'binomial')
+  # outcome model/regression:
+  fit <- lm(Y ~ X1 +  A1 + I(A1*X1) + I(A1*h) + I(A1*X1*h) , weights = abs(A1 - fitted(treat.mod)))
+  
+  Psi0[j,1:6] <- as.vector(fit$coefficients)
+  
+  
+
+  decision[,1] <- psi0[5] + psi1[5]*X1 + psi2[3]*h + psi2[3]*X1*h
+  decision[,2] <- fit$coefficients[3] + fit$coefficients[4]*X1 + fit$coefficients[5]*h + fit$coefficients[6]*X1*h
+  decision[,3] <- sign(decision[,1] )==sign(decision[,2])
+  prop <- sum(decision[,3])/n
+  Psi0[j,7] <- prop
+}
+colnames(Psi0) <- c("beta0", "beta 1", "psi0", "psi1","psi2", "psi3","correct ratio")
+Psi0[1:10,]
+
+```
+
+```{r}
+apply(Psi0, 2, mean)
+proph <- apply(Psi0, 2, mean)[7]
+proph
+# Violin plot
+library(vioplot)
+
+vioplot(Psi0[,3], Psi0[,4], Psi0[,5], Psi0[,6],  names=c("Psi0", "Psi1", "Psi2", "Psi3") )
+abline(h = 1, col = "green")
+abline(h = .5, col = "red") 
+```
+
+
+## Analysis 1
+## Model 1: 
+$$\mathop{\mathbb{E}[Y | ~]}= \beta_0 + \beta_1X + \beta_2H +\beta_3HX + A(\psi_0 + \psi_1X + \psi_2H + \psi_3 HX)$$
+with weight $w = |A - P(A = 1|covariates)|$
+
+```{r}
+expit <- function(x) 1/(1 + exp(-x)) 
+alpha0 <- c(-2, -1, 0, 1,2)
+alpha1 <- c(-2, -1, 0, 1,2)
+
+psi0 <-c(-1, -.1, 0, .1, 1)
+psi1 <-c(-1, -.1, 0, .1, 1)
+psi2 <-c(-.5, 0, .5)
+beta <- c(-1, -.5, 0, .5, 1)
+
+
+m <-1000  # m replications
+n <- 100
+Psi1 <- matrix(0, nrow = m, ncol =8+1)
+decision <- matrix(0, nrow = n, 3)
+for (j in 1:m) {
+  X1 <- rnorm(n) + 2
+  X12 <- X1^2
+  A1 <- rbinom(n, 1, expit( alpha0[3] + alpha1[4]*X1))
+  h <- rbinom(n, 1, expit(X1))
+  ## for Y
+  gamma1 <- A1 * (psi0[5] + psi1[5]*X1 + psi2[3]*h + psi2[3]*X1*h)
+  Y <- beta[1] + beta[5]*X1 + beta[5]*(X12) + gamma1+ rnorm(n)
+  ### Treatment model
+
+  treat.mod <- glm(A1~X1, family = 'binomial')
+  # outcome model/regression:
+  fit <- lm(Y ~ X1 + h + I(X1 * h) +  A1 + I(A1*X1) + I(A1*h) + I(A1*X1*h) , weights = abs(A1 - fitted(treat.mod)))
+  
+  Psi1[j,1:8] <- as.vector(fit$coefficients)
+  
+  
+
+  decision[,1] <- psi0[5] + psi1[5]*X1 + psi2[3]*h + psi2[3]*X1*h
+  decision[,2] <- fit$coefficients[5] + fit$coefficients[6]*X1 + fit$coefficients[7]*h + fit$coefficients[8]*X1*h
+  decision[,3] <- sign(decision[,1] )==sign(decision[,2])
+  prop <- sum(decision[,3])/n
+  Psi1[j,9] <- prop
+}
+colnames(Psi1) <- c("beta0", "beta 1","beta 2","beta 3", "psi0", "psi1","psi2", "psi3","correct ratio")
+Psi1[1:10,]
+
+```
+
+```{r}
+apply(Psi1, 2, mean)
+proph <- apply(Psi1, 2, mean)[9]
+proph
+vioplot(Psi1[,5], Psi1[,6], Psi1[,7], Psi1[,8],  names=c("Psi0", "Psi1", "Psi2", "Psi3") )
+abline(h = 1, col = "green")
+abline(h = .5, col = "red") 
+```
+
+
+## Analysis 2
+## Model 2: 
+$$\mathop{\mathbb{E}[Y | ~]}= \beta_0 + \beta_1X + A(\psi_0 + \psi_1X + \psi_2H + \psi_3 HX)$$
+with weight $w_{a,h}(x) = |a - \mathop{\mathbb{E}[A | X=x]} |*|h - \mathop{\mathbb{E}[H | X=x]}|$
+
+
+```{r}
+expit <- function(x) 1/(1 + exp(-x)) 
+alpha0 <- c(-2, -1, 0, 1,2)
+alpha1 <- c(-2, -1, 0, 1,2)
+
+psi0 <-c(-1, -.1, 0, .1, 1)
+psi1 <-c(-1, -.1, 0, .1, 1)
+psi2 <-c(-.5, 0, .5)
+beta <- c(-1, -.5, 0, .5, 1)
+
+
+m <-1000  # m replications
+n <- 100
+Psi2 <- matrix(0, nrow = m, ncol =7)
+decision <- matrix(0, nrow = n, 3)
+for (j in 1:m) {
+  X1 <- rnorm(n) + 2
+  X12 <- X1^2
+  A1 <- rbinom(n, 1, expit( alpha0[3] + alpha1[4]*X1))
+  h <- rbinom(n, 1, expit(X1))
+  ## for Y
+  gamma1 <- A1 * (psi0[5] + psi1[5]*X1 + psi2[3]*h + psi2[3]*X1*h)
+  Y <- beta[1] + beta[5]*X1 + beta[5]*(X12) + gamma1+ rnorm(n)
+  ### Treatment model
+
+  treat.mod <- glm(A1~X1, family = 'binomial')
+  
+  H.treat.mod <- glm(h~X1, family = 'binomial')
+
+  w2 = abs(A1 - fitted(treat.mod)) * abs(h - fitted(H.treat.mod))
+
+  # outcome model/regression:
+  fit <- lm(Y ~ X1 + A1 + I(A1*X1) + I(A1*h) + I(A1*h*X1), weights = w2)
+  # outcome model/regression:
+  # fit <- lm(Y ~ X1 + h + I(X1 * h) +  A1 + I(A1*X1) + I(A1*h) + I(A1*X1*h) , weights = abs(A1 - fitted(treat.mod)))
+  
+  Psi2[j,1:6] <- as.vector(fit$coefficients)
+  
+  
+
+  decision[,1] <- psi0[5] + psi1[5]*X1 + psi2[3]*h + psi2[3]*X1*h
+  decision[,2] <- fit$coefficients[3] + fit$coefficients[4]*X1 + fit$coefficients[5]*h + fit$coefficients[6]*X1*h
+  decision[,3] <- sign(decision[,1] )==sign(decision[,2])
+  prop <- sum(decision[,3])/n
+  Psi2[j,7] <- prop
+}
+colnames(Psi2) <- c("beta0", "beta 1", "psi0", "psi1","psi2", "psi3","correct ratio")
+Psi2[1:10,]
+
+```
+
+```{r}
+apply(Psi2, 2, mean)
+proph <- apply(Psi2, 2, mean)[7]
+proph
+vioplot(Psi2[,3], Psi2[,4], Psi2[,5], Psi2[,6], xlab = "estimates")
+axis(1, at=1:4, lab=c( expression(psi[0]) ,expression(psi[1]) , expression(psi[2]), expression(psi[3])))
+abline(h = 1, col = "green")
+abline(h = .5, col = "red") 
+```
+
+
+
+```{r}
+library(vioplot)
+par(mfrow=c(1,4))
+vioplot(Psi0[,3], Psi1[,5], Psi2[,3], xlab= "n = 100", ylab = expression(paste( psi[0], " estimates")) )
+abline(h = 1, col = "red")
+vioplot(Psi0[,4], Psi1[,6], Psi2[,4], xlab="n = 100", ylab = expression(paste( psi[1], " estimates")) )
+abline(h = 1, col = "red")
+
+vioplot(Psi0[,5], Psi1[,7], Psi2[,5], xlab="n = 100", ylab = expression(paste( psi[2], " estimates")))
+abline(h = .5, col = "red")
+
+vioplot(Psi0[,6], Psi1[,8], Psi2[,6] ,xlab=" n = 100",  ylab = expression(paste( psi[3], " estimates")) )
+abline(h = .5, col = "red")
+
+```
+
+
+#################################################################
+#################################################################
+
+
+## Analysis 0
+## Model 0: 
+$$\mathop{\mathbb{E}[Y | ~]}= \beta_0 + \beta_1X + A(\psi_0 + \psi_1X + \psi_2H + \psi_3 HX)$$
+with weight $w = |A - P(A = 1|covariates)|$
+
+```{r}
+expit <- function(x) 1/(1 + exp(-x)) 
+alpha0 <- c(-2, -1, 0, 1,2)
+alpha1 <- c(-2, -1, 0, 1,2)
+
+psi0 <-c(-1, -.1, 0, .1, 1)
+psi1 <-c(-1, -.1, 0, .1, 1)
+psi2 <-c(-.5, 0, .5)
+beta <- c(-1, -.5, 0, .5, 1)
+
+
+m <-1000  # m replications
+n <- 1000
+Psi00 <- matrix(0, nrow = m, ncol =6+1)
+decision <- matrix(0, nrow = n, 3)
+for (j in 1:m) {
+  X1 <- rnorm(n) + 2
+  X12 <- X1^2
+  A1 <- rbinom(n, 1, expit( alpha0[3] + alpha1[4]*X1))
+  h <- rbinom(n, 1, expit(X1))
+  ## for Y
+  gamma1 <- A1 * (psi0[5] + psi1[5]*X1 + psi2[3]*h + psi2[3]*X1*h)
+  Y <- beta[1] + beta[5]*X1 + beta[5]*(X12) + gamma1 + rnorm(n)
+  ### Treatment model
+
+  treat.mod <- glm(A1~X1, family = 'binomial')
+  # outcome model/regression:
+  fit <- lm(Y ~ X1 +  A1 + I(A1*X1) + I(A1*h) + I(A1*X1*h) , weights = abs(A1 - fitted(treat.mod)))
+  
+  Psi00[j,1:6] <- as.vector(fit$coefficients)
+  
+  
+
+  decision[,1] <- psi0[5] + psi1[5]*X1 + psi2[3]*h + psi2[3]*X1*h
+  decision[,2] <- fit$coefficients[3] + fit$coefficients[4]*X1 + fit$coefficients[5]*h + fit$coefficients[6]*X1*h
+  decision[,3] <- sign(decision[,1] )==sign(decision[,2])
+  prop <- sum(decision[,3])/n
+  Psi00[j,7] <- prop
+}
+colnames(Psi00) <- c("beta0", "beta 1", "psi0", "psi1","psi2", "psi3","correct ratio")
+Psi00[1:10,]
+
+```
+
+```{r}
+apply(Psi00, 2, mean)
+proph <- apply(Psi00, 2, mean)[7]
+proph
+vioplot(Psi00[,3], Psi00[,4], Psi00[,5], Psi00[,6],  names=c("Psi0", "Psi1", "Psi2", "Psi3") )
+abline(h = 1, col = "green")
+abline(h = .5, col = "red") 
+```
+
+
+## Analysis 1
+## Model 1: 
+$$\mathop{\mathbb{E}[Y | ~]}= \beta_0 + \beta_1X + \beta_2H +\beta_3HX + A(\psi_0 + \psi_1X + \psi_2H + \psi_3 HX)$$
+with weight $w = |A - P(A = 1|covariates)|$
+
+```{r}
+expit <- function(x) 1/(1 + exp(-x)) 
+alpha0 <- c(-2, -1, 0, 1,2)
+alpha1 <- c(-2, -1, 0, 1,2)
+
+psi0 <-c(-1, -.1, 0, .1, 1)
+psi1 <-c(-1, -.1, 0, .1, 1)
+psi2 <-c(-.5, 0, .5)
+beta <- c(-1, -.5, 0, .5, 1)
+
+
+m <-1000  # m replications
+n <- 1000
+Psi10 <- matrix(0, nrow = m, ncol =8+1)
+decision <- matrix(0, nrow = n, 3)
+for (j in 1:m) {
+  X1 <- rnorm(n) + 2
+  X12 <- X1^2
+  A1 <- rbinom(n, 1, expit( alpha0[3] + alpha1[4]*X1))
+  h <- rbinom(n, 1, expit(X1))
+  ## for Y
+  gamma1 <- A1 * (psi0[5] + psi1[5]*X1 + psi2[3]*h + psi2[3]*X1*h)
+  Y <- beta[1] + beta[5]*X1 + beta[5]*(X12) + gamma1+ rnorm(n)
+  ### Treatment model
+
+  treat.mod <- glm(A1~X1, family = 'binomial')
+  # outcome model/regression:
+  fit <- lm(Y ~ X1 + h + I(X1 * h) +  A1 + I(A1*X1) + I(A1*h) + I(A1*X1*h) , weights = abs(A1 - fitted(treat.mod)))
+  
+  Psi10[j,1:8] <- as.vector(fit$coefficients)
+  
+  
+
+  decision[,1] <- psi0[5] + psi1[5]*X1 + psi2[3]*h + psi2[3]*X1*h
+  decision[,2] <- fit$coefficients[5] + fit$coefficients[6]*X1 + fit$coefficients[7]*h + fit$coefficients[8]*X1*h
+  decision[,3] <- sign(decision[,1] )==sign(decision[,2])
+  prop <- sum(decision[,3])/n
+  Psi10[j,9] <- prop
+}
+colnames(Psi10) <- c("beta0", "beta 1","beta 2","beta 3", "psi0", "psi1","psi2", "psi3","correct ratio")
+Psi10[1:10,]
+
+```
+
+```{r}
+apply(Psi10, 2, mean)
+proph <- apply(Psi10, 2, mean)[9]
+proph
+vioplot(Psi10[,5], Psi10[,6], Psi10[,7], Psi10[,8],  names=c("Psi0", "Psi1", "Psi2", "Psi3") )
+abline(h = 1, col = "green")
+abline(h = .5, col = "red") 
+```
+
+
+## Analysis 2
+## Model 2: 
+$$\mathop{\mathbb{E}[Y | ~]}= \beta_0 + \beta_1X + A(\psi_0 + \psi_1X + \psi_2H + \psi_3 HX)$$
+with weight $w_{a,h}(x) = |a - \mathop{\mathbb{E}[A | X=x]} |*|h - \mathop{\mathbb{E}[H | X=x]}|$
+
+
+```{r}
+expit <- function(x) 1/(1 + exp(-x)) 
+alpha0 <- c(-2, -1, 0, 1,2)
+alpha1 <- c(-2, -1, 0, 1,2)
+
+psi0 <-c(-1, -.1, 0, .1, 1)
+psi1 <-c(-1, -.1, 0, .1, 1)
+psi2 <-c(-.5, 0, .5)
+beta <- c(-1, -.5, 0, .5, 1)
+
+
+m <-1000  # m replications
+n <- 1000
+Psi20 <- matrix(0, nrow = m, ncol =7)
+decision <- matrix(0, nrow = n, 3)
+for (j in 1:m) {
+  X1 <- rnorm(n) + 2
+  X12 <- X1^2
+  A1 <- rbinom(n, 1, expit( alpha0[3] + alpha1[4]*X1))
+  h <- rbinom(n, 1, expit(X1))
+  ## for Y
+  gamma1 <- A1 * (psi0[5] + psi1[5]*X1 + psi2[3]*h + psi2[3]*X1*h)
+  Y <- beta[1] + beta[5]*X1 + beta[5]*(X12) + gamma1+ rnorm(n)
+  ### Treatment model
+
+  treat.mod <- glm(A1~X1, family = 'binomial')
+  
+  H.treat.mod <- glm(h~X1, family = 'binomial')
+
+  w2 = abs(A1 - fitted(treat.mod)) * abs(h - fitted(H.treat.mod))
+
+  # outcome model/regression:
+  fit <- lm(Y ~ X1 + A1 + I(A1*X1) + I(A1*h) + I(A1*h*X1), weights = w2)
+  # outcome model/regression:
+  # fit <- lm(Y ~ X1 + h + I(X1 * h) +  A1 + I(A1*X1) + I(A1*h) + I(A1*X1*h) , weights = abs(A1 - fitted(treat.mod)))
+  
+  Psi20[j,1:6] <- as.vector(fit$coefficients)
+  
+  
+
+  decision[,1] <- psi0[5] + psi1[5]*X1 + psi2[3]*h + psi2[3]*X1*h
+  decision[,2] <- fit$coefficients[3] + fit$coefficients[4]*X1 + fit$coefficients[5]*h + fit$coefficients[6]*X1*h
+  decision[,3] <- sign(decision[,1] )==sign(decision[,2])
+  prop <- sum(decision[,3])/n
+  Psi20[j,7] <- prop
+}
+colnames(Psi20) <- c("beta0", "beta 1", "psi0", "psi1","psi2", "psi3","correct ratio")
+Psi20[1:10,]
+
+```
+
+```{r}
+apply(Psi20, 2, mean)
+proph <- apply(Psi20, 2, mean)[7]
+proph
+vioplot(Psi20[,3], Psi20[,4], Psi20[,5], Psi20[,6],  names=c("Psi0", "Psi1", "Psi2", "Psi3") )
+abline(h = 1, col = "green")
+abline(h = .5, col = "red") 
+```
+
+
+
+```{r}
+par(mfrow=c(1,4))
+vioplot(Psi00[,3], Psi10[,5], Psi20[,3], xlab=" n = 1,000", ylab = expression(paste( psi[0], " estimates")) )
+abline(h = 1, col = "red")
+
+vioplot(Psi00[,4], Psi10[,6], Psi20[,4], xlab=" n = 1,000", ylab = expression(paste( psi[1], " estimates")) )
+abline(h = 1, col = "red")
+
+vioplot(Psi00[,5], Psi10[,7], Psi20[,5], xlab=" n = 1,000 ", ylab = expression(paste( psi[2], " estimates")))
+abline(h = .5, col = "red")
+
+vioplot(Psi00[,6], Psi10[,8], Psi20[,6] ,xlab=" n = 1,000 ", ylab = expression(paste( psi[3], " estimates")) )
+abline(h = .5, col = "red")
+```
+
+#################################################################
+#################################################################
+
+
+
+
+
+
+
+
+
+#################################################################
+#################################################################
+
+## Analysis 0
+## Model 0: 
+$$\mathop{\mathbb{E}[Y | ~]}= \beta_0 + \beta_1X + A(\psi_0 + \psi_1X + \psi_2H + \psi_3 HX)$$
+with weight $w = |A - P(A = 1|covariates)|$
+
+```{r}
+expit <- function(x) 1/(1 + exp(-x)) 
+alpha0 <- c(-2, -1, 0, 1,2)
+alpha1 <- c(-2, -1, 0, 1,2)
+
+psi0 <-c(-1, -.1, 0, .1, 1)
+psi1 <-c(-1, -.1, 0, .1, 1)
+psi2 <-c(-.5, 0, .5)
+beta <- c(-1, -.5, 0, .5, 1)
+
+
+m <-1000  # m replications
+n <- 10000
+Psi000 <- matrix(0, nrow = m, ncol =6+1)
+decision <- matrix(0, nrow = n, 3)
+for (j in 1:m) {
+  X1 <- rnorm(n) + 2
+  X12 <- X1^2
+  A1 <- rbinom(n, 1, expit( alpha0[3] + alpha1[4]*X1))
+  h <- rbinom(n, 1, expit(X1))
+  ## for Y
+  gamma1 <- A1 * (psi0[5] + psi1[5]*X1 + psi2[3]*h + psi2[3]*X1*h)
+  Y <- beta[1] + beta[5]*X1 + beta[5]*(X12) + gamma1 + rnorm(n)
+  ### Treatment model
+
+  treat.mod <- glm(A1~X1, family = 'binomial')
+  # outcome model/regression:
+  fit <- lm(Y ~ X1 +  A1 + I(A1*X1) + I(A1*h) + I(A1*X1*h) , weights = abs(A1 - fitted(treat.mod)))
+  
+  Psi000[j,1:6] <- as.vector(fit$coefficients)
+  
+  
+
+  decision[,1] <- psi0[5] + psi1[5]*X1 + psi2[3]*h + psi2[3]*X1*h
+  decision[,2] <- fit$coefficients[3] + fit$coefficients[4]*X1 + fit$coefficients[5]*h + fit$coefficients[6]*X1*h
+  decision[,3] <- sign(decision[,1] )==sign(decision[,2])
+  prop <- sum(decision[,3])/n
+  Psi000[j,7] <- prop
+}
+colnames(Psi000) <- c("beta0", "beta 1", "psi0", "psi1","psi2", "psi3","correct ratio")
+Psi000[1:10,]
+
+```
+
+```{r}
+apply(Psi000, 2, mean)
+proph <- apply(Psi000, 2, mean)[7]
+proph
+vioplot(Psi000[,3], Psi000[,4], Psi000[,5], Psi000[,6],  names=c("Psi0", "Psi1", "Psi2", "Psi3") )
+abline(h = 1, col = "green")
+abline(h = .5, col = "red") 
+```
+
+
+## Analysis 1
+## Model 1: 
+$$\mathop{\mathbb{E}[Y | ~]}= \beta_0 + \beta_1X + \beta_2H +\beta_3HX + A(\psi_0 + \psi_1X + \psi_2H + \psi_3 HX)$$
+with weight $w = |A - P(A = 1|covariates)|$
+
+```{r}
+expit <- function(x) 1/(1 + exp(-x)) 
+alpha0 <- c(-2, -1, 0, 1,2)
+alpha1 <- c(-2, -1, 0, 1,2)
+
+psi0 <-c(-1, -.1, 0, .1, 1)
+psi1 <-c(-1, -.1, 0, .1, 1)
+psi2 <-c(-.5, 0, .5)
+beta <- c(-1, -.5, 0, .5, 1)
+
+
+m <-1000  # m replications
+n <- 10000
+Psi100 <- matrix(0, nrow = m, ncol =8+1)
+decision <- matrix(0, nrow = n, 3)
+for (j in 1:m) {
+  X1 <- rnorm(n) + 2
+  X12 <- X1^2
+  A1 <- rbinom(n, 1, expit( alpha0[3] + alpha1[4]*X1))
+  h <- rbinom(n, 1, expit(X1))
+  ## for Y
+  gamma1 <- A1 * (psi0[5] + psi1[5]*X1 + psi2[3]*h + psi2[3]*X1*h)
+  Y <- beta[1] + beta[5]*X1 + beta[5]*(X12) + gamma1+ rnorm(n)
+  ### Treatment model
+
+  treat.mod <- glm(A1~X1, family = 'binomial')
+  # outcome model/regression:
+  fit <- lm(Y ~ X1 + h + I(X1 * h) +  A1 + I(A1*X1) + I(A1*h) + I(A1*X1*h) , weights = abs(A1 - fitted(treat.mod)))
+  
+  Psi100[j,1:8] <- as.vector(fit$coefficients)
+  
+  
+
+  decision[,1] <- psi0[5] + psi1[5]*X1 + psi2[3]*h + psi2[3]*X1*h
+  decision[,2] <- fit$coefficients[5] + fit$coefficients[6]*X1 + fit$coefficients[7]*h + fit$coefficients[8]*X1*h
+  decision[,3] <- sign(decision[,1] )==sign(decision[,2])
+  prop <- sum(decision[,3])/n
+  Psi100[j,9] <- prop
+}
+colnames(Psi100) <- c("beta0", "beta 1","beta 2","beta 3", "psi0", "psi1","psi2", "psi3","correct ratio")
+Psi100[1:10,]
+
+```
+
+```{r}
+apply(Psi100, 2, mean)
+proph <- apply(Psi100, 2, mean)[9]
+proph
+vioplot(Psi100[,5], Psi100[,6], Psi100[,7], Psi100[,8],  names=c("Psi0", "Psi1", "Psi2", "Psi3") )
+abline(h = 1, col = "green")
+abline(h = .5, col = "red") 
+```
+
+
+## Analysis 2
+## Model 2: 
+$$\mathop{\mathbb{E}[Y | ~]}= \beta_0 + \beta_1X + A(\psi_0 + \psi_1X + \psi_2H + \psi_3 HX)$$
+with weight $w_{a,h}(x) = |a - \mathop{\mathbb{E}[A | X=x]} |*|h - \mathop{\mathbb{E}[H | X=x]}|$
+
+
+```{r}
+expit <- function(x) 1/(1 + exp(-x)) 
+alpha0 <- c(-2, -1, 0, 1,2)
+alpha1 <- c(-2, -1, 0, 1,2)
+
+psi0 <-c(-1, -.1, 0, .1, 1)
+psi1 <-c(-1, -.1, 0, .1, 1)
+psi2 <-c(-.5, 0, .5)
+beta <- c(-1, -.5, 0, .5, 1)
+
+
+m <-1000  # m replications
+n <- 10000
+Psi200 <- matrix(0, nrow = m, ncol =7)
+decision <- matrix(0, nrow = n, 3)
+for (j in 1:m) {
+  X1 <- rnorm(n) + 2
+  X12 <- X1^2
+  A1 <- rbinom(n, 1, expit( alpha0[3] + alpha1[4]*X1))
+  h <- rbinom(n, 1, expit(X1))
+  ## for Y
+  gamma1 <- A1 * (psi0[5] + psi1[5]*X1 + psi2[3]*h + psi2[3]*X1*h)
+  Y <- beta[1] + beta[5]*X1 + beta[5]*(X12) + gamma1+ rnorm(n)
+  ### Treatment model
+
+  treat.mod <- glm(A1~X1, family = 'binomial')
+  
+  H.treat.mod <- glm(h~X1, family = 'binomial')
+
+  w2 = abs(A1 - fitted(treat.mod)) * abs(h - fitted(H.treat.mod))
+
+  # outcome model/regression:
+  fit <- lm(Y ~ X1 + A1 + I(A1*X1) + I(A1*h) + I(A1*h*X1), weights = w2)
+  # outcome model/regression:
+  # fit <- lm(Y ~ X1 + h + I(X1 * h) +  A1 + I(A1*X1) + I(A1*h) + I(A1*X1*h) , weights = abs(A1 - fitted(treat.mod)))
+  
+  Psi200[j,1:6] <- as.vector(fit$coefficients)
+  
+  
+
+  decision[,1] <- psi0[5] + psi1[5]*X1 + psi2[3]*h + psi2[3]*X1*h
+  decision[,2] <- fit$coefficients[3] + fit$coefficients[4]*X1 + fit$coefficients[5]*h + fit$coefficients[6]*X1*h
+  decision[,3] <- sign(decision[,1] )==sign(decision[,2])
+  prop <- sum(decision[,3])/n
+  Psi200[j,7] <- prop
+}
+colnames(Psi200) <- c("beta0", "beta 1", "psi0", "psi1","psi2", "psi3","correct ratio")
+Psi200[1:10,]
+
+```
+
+```{r}
+apply(Psi200, 2, mean)
+proph <- apply(Psi200, 2, mean)[7]
+proph
+vioplot(Psi200[,3], Psi200[,4], Psi200[,5], Psi200[,6],  names=c("Psi0", "Psi1", "Psi2", "Psi3") )
+abline(h = 1, col = "green")
+abline(h = .5, col = "red") 
+```
+
+
+
+```{r}
+par(mfrow=c(1,4))
+vioplot(Psi000[,3], Psi100[,5], Psi200[,3], xlab=" n = 10,000", ylab = expression(paste( psi[0], " estimates")) )
+abline(h = 1, col = "red")
+
+vioplot(Psi000[,4], Psi100[,6], Psi200[,4], xlab=" n = 10,000", ylab = expression(paste( psi[1], " estimates")) )
+abline(h = 1, col = "red")
+
+vioplot(Psi000[,5], Psi100[,7], Psi200[,5], xlab=" n = 10,000", ylab = expression(paste( psi[2], " estimates")))
+abline(h = .5, col = "red")
+
+vioplot(Psi000[,6], Psi100[,8], Psi200[,6] ,xlab=" n = 10,000", ylab = expression(paste( psi[3], " estimates")) )
+abline(h = .5, col = "red")
+
+```
+
+#################################################################
+#################################################################
+
+
+
+
+```{r}
+par(mfrow=c(1,4))
+vioplot(Psi00[,3], Psi10[,5], Psi20[,3], xlab=" n = 1,000", ylab = expression(paste( psi[0], " estimates")) )
+abline(h = 1, col = "red")
+
+vioplot(Psi00[,4], Psi10[,6], Psi20[,4], xlab=" n = 1,000", ylab = expression(paste( psi[1], " estimates")) )
+abline(h = 1, col = "red")
+
+vioplot(Psi00[,5], Psi10[,7], Psi20[,5], xlab=" n = 1,000 ", ylab = expression(paste( psi[2], " estimates")))
+abline(h = .5, col = "red")
+
+vioplot(Psi00[,6], Psi10[,8], Psi20[,6] ,xlab=" n = 1,000 ", ylab = expression(paste( psi[3], " estimates")) )
+abline(h = .5, col = "red")
+```
+
+```{r}
+library(vioplot)
+par(mfrow=c(1,4))
+vioplot(Psi0[,3], Psi1[,5], Psi2[,3], xlab= "n = 100", ylab = expression(paste( psi[0], " estimates")) )
+abline(h = 1, col = "red")
+vioplot(Psi0[,4], Psi1[,6], Psi2[,4], xlab="n = 100", ylab = expression(paste( psi[1], " estimates")) )
+abline(h = 1, col = "red")
+
+vioplot(Psi0[,5], Psi1[,7], Psi2[,5], xlab="n = 100", ylab = expression(paste( psi[2], " estimates")))
+abline(h = .5, col = "red")
+
+vioplot(Psi0[,6], Psi1[,8], Psi2[,6] ,xlab=" n = 100",  ylab = expression(paste( psi[3], " estimates")) )
+abline(h = .5, col = "red")
+```
+
+```{r}
+par(mfrow=c(2,3))
+vioplot(Psi0[,3], Psi1[,5], Psi2[,3], xlab= "n = 100", ylab = expression(paste( psi[0], " estimates")) )
+abline(h = 1, col = "red")
+vioplot(Psi00[,3], Psi10[,5], Psi20[,3], xlab=" n = 1,000", ylab = expression(paste( psi[0], " estimates")) )
+abline(h = 1, col = "red")
+vioplot(Psi000[,3], Psi100[,5], Psi200[,3], xlab=" n = 10,000", ylab = expression(paste( psi[0], " estimates")) )
+abline(h = 1, col = "red")
+
+vioplot(Psi0[,4], Psi1[,6], Psi2[,4], xlab="n = 100", ylab = expression(paste( psi[1], " estimates")) )
+abline(h = 1, col = "red")
+vioplot(Psi00[,4], Psi10[,6], Psi20[,4], xlab=" n = 1,000", ylab = expression(paste( psi[1], " estimates")) )
+abline(h = 1, col = "red")
+vioplot(Psi000[,4], Psi100[,6], Psi200[,4], xlab=" n = 10,000", ylab = expression(paste( psi[1], " estimates")) )
+abline(h = 1, col = "red")
+
+```
+
+
+```{r}
+par(mfrow=c(2,3))
+vioplot(Psi0[,5], Psi1[,7], Psi2[,5], xlab="n = 100", ylab = expression(paste( psi[2], " estimates")))
+abline(h = .5, col = "red")
+vioplot(Psi00[,5], Psi10[,7], Psi20[,5], xlab=" n = 1,000 ", ylab = expression(paste( psi[2], " estimates")))
+abline(h = .5, col = "red")
+vioplot(Psi000[,5], Psi100[,7], Psi200[,5], xlab=" n = 10,000", ylab = expression(paste( psi[2], " estimates")))
+abline(h = .5, col = "red")
+
+
+
+vioplot(Psi0[,6], Psi1[,8], Psi2[,6] ,xlab=" n = 100",  ylab = expression(paste( psi[3], " estimates")) )
+abline(h = .5, col = "red")
+vioplot(Psi00[,6], Psi10[,8], Psi20[,6] ,xlab=" n = 1,000 ", ylab = expression(paste( psi[3], " estimates")) )
+abline(h = .5, col = "red")
+vioplot(Psi000[,6], Psi100[,8], Psi200[,6] ,xlab=" n = 10,000", ylab = expression(paste( psi[3], " estimates")) )
+abline(h = .5, col = "red")
+
+
+```
+
