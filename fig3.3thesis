@@ -677,18 +677,18 @@ abline(h = .5, col = "red")
 
 ```{r}
 par(mfrow=c(2,3))
-vioplot(Psi0[,3], Psi1[,5], Psi2[,3], xlab= "n = 100", ylab = expression(paste( psi[0], " estimates")) )
+vioplot(Psi0[,3], Psi1[,5], Psi2[,3],  names=c("M1", "M2", "M3"), xlab= "n = 100", ylab = expression(paste( psi[0], " estimates")) )
 abline(h = 1, col = "red")
-vioplot(Psi00[,3], Psi10[,5], Psi20[,3], xlab=" n = 1,000", ylab = expression(paste( psi[0], " estimates")) )
+vioplot(Psi00[,3], Psi10[,5], Psi20[,3], names=c("M1", "M2", "M3"), xlab=" n = 1,000", ylab = expression(paste( psi[0], " estimates")) )
 abline(h = 1, col = "red")
-vioplot(Psi000[,3], Psi100[,5], Psi200[,3], xlab=" n = 10,000", ylab = expression(paste( psi[0], " estimates")) )
+vioplot(Psi000[,3], Psi100[,5], Psi200[,3],names=c("M1", "M2", "M3"),  xlab=" n = 10,000", ylab = expression(paste( psi[0], " estimates")) )
 abline(h = 1, col = "red")
 
-vioplot(Psi0[,4], Psi1[,6], Psi2[,4], xlab="n = 100", ylab = expression(paste( psi[1], " estimates")) )
+vioplot(Psi0[,4], Psi1[,6], Psi2[,4], names=c("M1", "M2", "M3"), xlab="n = 100", ylab = expression(paste( psi[1], " estimates")) )
 abline(h = 1, col = "red")
-vioplot(Psi00[,4], Psi10[,6], Psi20[,4], xlab=" n = 1,000", ylab = expression(paste( psi[1], " estimates")) )
+vioplot(Psi00[,4], Psi10[,6], Psi20[,4], names=c("M1", "M2", "M3"), xlab=" n = 1,000", ylab = expression(paste( psi[1], " estimates")) )
 abline(h = 1, col = "red")
-vioplot(Psi000[,4], Psi100[,6], Psi200[,4], xlab=" n = 10,000", ylab = expression(paste( psi[1], " estimates")) )
+vioplot(Psi000[,4], Psi100[,6], Psi200[,4],names=c("M1", "M2", "M3"),  xlab=" n = 10,000", ylab = expression(paste( psi[1], " estimates")) )
 abline(h = 1, col = "red")
 
 ```
@@ -696,20 +696,20 @@ abline(h = 1, col = "red")
 
 ```{r}
 par(mfrow=c(2,3))
-vioplot(Psi0[,5], Psi1[,7], Psi2[,5], xlab="n = 100", ylab = expression(paste( psi[2], " estimates")))
+vioplot(Psi0[,5], Psi1[,7], Psi2[,5], names=c("M1", "M2", "M3"), xlab="n = 100", ylab = expression(paste( psi[2], " estimates")))
 abline(h = .5, col = "red")
-vioplot(Psi00[,5], Psi10[,7], Psi20[,5], xlab=" n = 1,000 ", ylab = expression(paste( psi[2], " estimates")))
+vioplot(Psi00[,5], Psi10[,7], Psi20[,5], names=c("M1", "M2", "M3"), xlab=" n = 1,000 ", ylab = expression(paste( psi[2], " estimates")))
 abline(h = .5, col = "red")
-vioplot(Psi000[,5], Psi100[,7], Psi200[,5], xlab=" n = 10,000", ylab = expression(paste( psi[2], " estimates")))
+vioplot(Psi000[,5], Psi100[,7], Psi200[,5],names=c("M1", "M2", "M3"),  xlab=" n = 10,000", ylab = expression(paste( psi[2], " estimates")))
 abline(h = .5, col = "red")
 
 
 
-vioplot(Psi0[,6], Psi1[,8], Psi2[,6] ,xlab=" n = 100",  ylab = expression(paste( psi[3], " estimates")) )
+vioplot(Psi0[,6], Psi1[,8], Psi2[,6] ,names=c("M1", "M2", "M3"), xlab=" n = 100",  ylab = expression(paste( psi[3], " estimates")) )
 abline(h = .5, col = "red")
-vioplot(Psi00[,6], Psi10[,8], Psi20[,6] ,xlab=" n = 1,000 ", ylab = expression(paste( psi[3], " estimates")) )
+vioplot(Psi00[,6], Psi10[,8], Psi20[,6] ,names=c("M1", "M2", "M3"), xlab=" n = 1,000 ", ylab = expression(paste( psi[3], " estimates")) )
 abline(h = .5, col = "red")
-vioplot(Psi000[,6], Psi100[,8], Psi200[,6] ,xlab=" n = 10,000", ylab = expression(paste( psi[3], " estimates")) )
+vioplot(Psi000[,6], Psi100[,8], Psi200[,6] ,names=c("M1", "M2", "M3"), xlab=" n = 10,000", ylab = expression(paste( psi[3], " estimates")) )
 abline(h = .5, col = "red")
 
 
